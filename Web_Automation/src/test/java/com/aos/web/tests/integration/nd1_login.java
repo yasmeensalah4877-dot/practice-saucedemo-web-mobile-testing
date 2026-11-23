@@ -179,7 +179,6 @@ public class nd1_login {
 
         username.sendKeys("standard_user");
         password.sendKeys("secret_sauce");
-
         loginButton.click();
 
         wait.until(ExpectedConditions.urlContains("inventory.html"));

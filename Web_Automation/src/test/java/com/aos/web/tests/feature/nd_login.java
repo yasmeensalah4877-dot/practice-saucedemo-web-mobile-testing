@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.Map;
 public class nd_login{
 
-
         WebDriver driver;
         WebDriverWait wait;
 
