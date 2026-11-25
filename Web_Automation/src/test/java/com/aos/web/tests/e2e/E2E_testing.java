@@ -1,6 +1,7 @@
 package com.aos.web.tests.e2e;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -40,10 +41,13 @@ public class E2E_testing {
     private int failedTests = 0;
     private final List<String> detectedBugs = new ArrayList<>();
 
-    // محددات تسجيل الدخول وإضافة منتج والانتقال لصفحة Checkout
+    // محددات تسجيل الدخول
     private static final By USERNAME_INPUT = By.cssSelector("input[data-test='username']#user-name");
     private static final By PASSWORD_INPUT = By.cssSelector("input[data-test='password']#password");
     private static final By LOGIN_BUTTON = By.cssSelector("input[data-test='login-button']#login-button");
+    private static final By LOGIN_ERROR_MSG = By.cssSelector("h3[data-test='error']");
+
+    // محددات المنتجات والسلة
     private static final By ADD_TO_CART_BTN = By.cssSelector("button[data-test^='add-to-cart']");
     private static final By CART_LINK = By.cssSelector("a[data-test='shopping-cart-link'].shopping_cart_link");
     private static final By CHECKOUT_BUTTON = By.cssSelector("button[data-test='checkout']#checkout");
@@ -70,15 +74,28 @@ public class E2E_testing {
         Thread.sleep(sleepMillis);
     }
 
-    // انتظار عنصر حتى يظهر بوضوح
-    private WebElement waitForVisible(By locator, String elementName) {
-        System.out.println("   -> انتظار ظهور: " + elementName);
-        return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+    // تمييز العنصر بإطار واضح داخل المتصفح لتتبع الخطوة بصرياً
+    private void highlightElement(WebElement element) {
+        try {
+            JavascriptExecutor js = (JavascriptExecutor) driver;
+            js.executeScript("arguments[0].style.border='3px dashed #e11d48'; arguments[0].style.backgroundColor='#fff1f2';", element);
+        } catch (Exception ignored) {
+        }
     }
 
-    // انتظار عنصر حتى يصبح قابلاً للضغط ثم الضغط عليه
+    // انتظار عنصر حتى يظهر بوضوح وتظليله
+    private WebElement waitForVisible(By locator, String elementName) {
+        System.out.println("   -> انتظار ظهور: " + elementName);
+        WebElement el = wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+        highlightElement(el);
+        return el;
+    }
+
+    // انتظار عنصر حتى يصبح قابلاً للضغط ثم تظليله والضغط عليه
     private void waitAndClick(By locator, String elementName, long sleepAfterMillis) throws InterruptedException {
         WebElement el = wait.until(ExpectedConditions.elementToBeClickable(locator));
+        highlightElement(el);
+        Thread.sleep(450);
         el.click();
         showStep("تم الضغط على: " + elementName, sleepAfterMillis);
     }
@@ -86,70 +103,73 @@ public class E2E_testing {
     // كتابة جزء من الاسم تدريجياً داخل حقل لإظهار الخطوة بوضوح
     private void appendNamePartGradually(WebElement input, String fieldName, String partLabel, String partText,
                                          long charSleepMillis) throws InterruptedException {
-        showStep("كتابة [" + partLabel + "] داخل [" + fieldName + "]: \"" + partText + "\"", 600);
+        highlightElement(input);
+        showStep("الآن أكتب [" + partLabel + "] في [" + fieldName + "]: \"" + partText + "\"", 800);
         for (int i = 0; i < partText.length(); i++) {
             input.sendKeys(String.valueOf(partText.charAt(i)));
             Thread.sleep(charSleepMillis);
         }
-        showStep("تمت كتابة [" + partLabel + "] -> القيمة الحالية في [" + fieldName + "]: \""
-                + input.getAttribute("value") + "\"", 750);
+        showStep("انتهت كتابة [" + partLabel + "] -> القيمة الآن داخل [" + fieldName + "]: \""
+                + input.getAttribute("value") + "\"", 950);
     }
 
     // كتابة نص كامل خطوة بخطوة داخل حقل
     private void typeGradually(By locator, String fieldName, String value, long charSleepMillis)
             throws InterruptedException {
         WebElement input = waitForVisible(locator, fieldName);
-        showStep("بدء الكتابة في [" + fieldName + "]: \"" + value + "\"", 600);
+        showStep("الآن أكتب في [" + fieldName + "]: \"" + value + "\"", 800);
         input.clear();
         for (int i = 0; i < value.length(); i++) {
             input.sendKeys(String.valueOf(value.charAt(i)));
             Thread.sleep(charSleepMillis);
         }
-        showStep("اكتملت الكتابة في [" + fieldName + "] -> القيمة الحالية: \"" + input.getAttribute("value") + "\"", 750);
+        showStep("اكتملت الكتابة في [" + fieldName + "] -> القيمة الحالية: \"" + input.getAttribute("value") + "\"", 950);
     }
 
     // كتابة الاسم الأول + الثاني في حقل First Name خطوة بخطوة
     private void enterFirstAndSecondNameStepByStep() throws InterruptedException {
         WebElement firstInput = waitForVisible(FIRST_NAME_INPUT, "First Name");
         firstInput.clear();
-        appendNamePartGradually(firstInput, "First Name", "الاسم الأول", FIRST_NAME, 75);
+        appendNamePartGradually(firstInput, "First Name", "الاسم الأول", FIRST_NAME, 120);
         firstInput.sendKeys(" ");
-        appendNamePartGradually(firstInput, "First Name", "الاسم الثاني", SECOND_NAME, 75);
+        appendNamePartGradually(firstInput, "First Name", "الاسم الثاني", SECOND_NAME, 120);
     }
 
     // كتابة الاسم الثالث + الرابع في حقل Last Name خطوة بخطوة
     private void enterThirdAndFourthNameStepByStep() throws InterruptedException {
         WebElement lastInput = waitForVisible(LAST_NAME_INPUT, "Last Name");
         lastInput.clear();
-        appendNamePartGradually(lastInput, "Last Name", "الاسم الثالث", THIRD_NAME, 75);
+        appendNamePartGradually(lastInput, "Last Name", "الاسم الثالث", THIRD_NAME, 120);
         lastInput.sendKeys(" ");
-        appendNamePartGradually(lastInput, "Last Name", "الاسم الرابع", FOURTH_NAME, 75);
+        appendNamePartGradually(lastInput, "Last Name", "الاسم الرابع", FOURTH_NAME, 120);
     }
 
-    // فتح الموقع -> تسجيل الدخول -> إضافة منتج -> فتح السلة -> الضغط على Checkout
-    private void navigateToCheckoutStepOne() throws InterruptedException {
-        showStep("فتح موقع SauceDemo (https://www.saucedemo.com/)", 1200);
-        driver.get("https://www.saucedemo.com/");
-        showStep("تم فتح الموقع | URL الحالي: " + driver.getCurrentUrl(), 1000);
+    // دالة تسجيل الدخول (تُستخدم للدخول الناجح أو الفاشل)
+    private void attemptLogin(String username, String password) throws InterruptedException {
+        typeGradually(USERNAME_INPUT, "Username", username, 110);
+        typeGradually(PASSWORD_INPUT, "Password", password, 110);
+        showStep("الآن أضغط على زر Login", 700);
+        waitAndClick(LOGIN_BUTTON, "Login Button", 1500);
+    }
 
-        typeGradually(USERNAME_INPUT, "Username", "standard_user", 70);
-        typeGradually(PASSWORD_INPUT, "Password", "secret_sauce", 70);
+    // تسجيل الدخول بنجاح -> اختيار عنصر -> فتح السلة -> الضغط على Checkout
+    private void loginAndNavigateToCheckoutStepOne() throws InterruptedException {
+        attemptLogin("standard_user", "secret_sauce");
 
-        showStep("الضغط على زر Login", 600);
-        waitAndClick(LOGIN_BUTTON, "Login Button", 1300);
+        String productsTitle = waitForVisible(PAGE_TITLE, "Products Page Title").getText().trim();
+        showStep("تم الدخول بنجاح! نحن الآن في صفحة: " + productsTitle, 1200);
 
-        showStep("إضافة منتج إلى السلة (Add to Cart)", 600);
-        waitAndClick(ADD_TO_CART_BTN, "Add to Cart Button", 1100);
+        showStep("الآن أختار عنصراً وأضيفه إلى السلة (Add to Cart)", 800);
+        waitAndClick(ADD_TO_CART_BTN, "Add to Cart Button", 1400);
 
-        showStep("الانتقال إلى سلة التسوق (Cart)", 600);
-        waitAndClick(CART_LINK, "Shopping Cart Link", 1200);
+        showStep("الآن أنتقل إلى سلة التسوق (Cart)", 800);
+        waitAndClick(CART_LINK, "Shopping Cart Link", 1400);
 
-        showStep("الضغط على زر Checkout للدخول إلى Step One", 600);
-        waitAndClick(CHECKOUT_BUTTON, "Checkout Button", 1400);
+        showStep("الآن أضغط على زر Checkout للدخول إلى Step One", 800);
+        waitAndClick(CHECKOUT_BUTTON, "Checkout Button", 1500);
 
         String title = waitForVisible(PAGE_TITLE, "Checkout Page Title").getText().trim();
-        showStep("داخل صفحة Checkout Step One | العنوان: \"" + title + "\" | URL: "
-                + driver.getCurrentUrl(), 1200);
+        showStep("وصلنا إلى صفحة Checkout Step One | العنوان: \"" + title + "\"", 1200);
     }
 
     // تعبئة بيانات الـ Checkout والضغط على Continue خطوة بخطوة
@@ -158,38 +178,38 @@ public class E2E_testing {
         if (FULL_FIRST_FIELD.equals(firstName)) {
             enterFirstAndSecondNameStepByStep();
         } else {
-            typeGradually(FIRST_NAME_INPUT, "First Name", firstName, 75);
+            typeGradually(FIRST_NAME_INPUT, "First Name", firstName, 110);
         }
 
         if (FULL_LAST_FIELD.equals(lastName)) {
             enterThirdAndFourthNameStepByStep();
         } else {
-            typeGradually(LAST_NAME_INPUT, "Last Name", lastName, 75);
+            typeGradually(LAST_NAME_INPUT, "Last Name", lastName, 110);
         }
 
-        typeGradually(POSTAL_CODE_INPUT, "Postal Code", postalCode, 85);
+        typeGradually(POSTAL_CODE_INPUT, "Postal Code", postalCode, 120);
 
-        showStep("الضغط على زر Continue للانتقال إلى Checkout: Overview", 700);
-        waitAndClick(CONTINUE_BUTTON, "Continue Button", 1600);
-        showStep("بعد الضغط على Continue | URL الحالي: " + driver.getCurrentUrl(), 1100);
+        showStep("الآن أضغط على زر Continue للانتقال إلى Checkout: Overview", 900);
+        waitAndClick(CONTINUE_BUTTON, "Continue Button", 1800);
+        showStep("بعد الضغط على Continue | URL الحالي: " + driver.getCurrentUrl(), 1300);
     }
 
     // إتمام الأوردر بالكامل من صفحة Overview بالضغط على Finish
     private void completeOrderUntilEnd() throws InterruptedException {
         String overviewTitle = waitForVisible(PAGE_TITLE, "Checkout: Overview Title").getText().trim();
-        showStep("وصلنا لصفحة Overview | العنوان: \"" + overviewTitle + "\" | URL: " + driver.getCurrentUrl(), 1300);
+        showStep("نحن الآن في صفحة Overview | العنوان: \"" + overviewTitle + "\" | URL: " + driver.getCurrentUrl(), 1500);
 
         Assert.assertTrue(driver.getCurrentUrl().contains("checkout-step-two.html"),
                 "Expected /checkout-step-two.html, got: " + driver.getCurrentUrl());
         Assert.assertEquals(overviewTitle, "Checkout: Overview",
                 "Expected page title 'Checkout: Overview'.");
 
-        showStep("الضغط على زر Finish لإتمام الأوردر باسم: " + FULL_NAME, 800);
-        waitAndClick(FINISH_BUTTON, "Finish Button", 1700);
+        showStep("الآن أضغط على زر Finish لإتمام الأوردر باسم: " + FULL_NAME, 1000);
+        waitAndClick(FINISH_BUTTON, "Finish Button", 1800);
 
         String completeHeader = waitForVisible(COMPLETE_HEADER, "Order Complete Header").getText().trim();
         String completeTitle = waitForVisible(PAGE_TITLE, "Checkout: Complete Title").getText().trim();
-        showStep("تم إتمام الأوردر بنجاح حتى النهاية | العنوان: \"" + completeTitle + "\" | الرسالة: \""
+        showStep("تم إتمام الأوردر بنجاح! | العنوان: \"" + completeTitle + "\" | الرسالة: \""
                 + completeHeader + "\"", 1800);
     }
 
@@ -205,21 +225,30 @@ public class E2E_testing {
     @BeforeMethod
     public void beforeMethod() throws InterruptedException {
         stepCounter = 1;
-        System.out.println("\n================ [BEFORE METHOD] تجهيز مسار E2E خطوة بخطوة ================");
-        navigateToCheckoutStepOne();
+        System.out.println("\n================ [BEFORE METHOD] فتح رابط الموقع ================");
+        showStep("أفتح الآن موقع SauceDemo (https://www.saucedemo.com/)", 1300);
+        driver.get("https://www.saucedemo.com/");
+        showStep("تم فتح الموقع | URL الحالي: " + driver.getCurrentUrl(), 1000);
     }
 
-    /*
-     * BUG REPORT - TC1
-     * Title: Full E2E order flow fails to write full name, reach Overview, or complete order on Finish
-     * Steps: Login -> Add to cart -> Cart -> Checkout -> Enter First Name="Yasmeen Salah", Last Name="Abdelrazek Youssef", Postal Code="32511" -> Continue -> Finish
-     * Expected: Reach Checkout: Overview, click Finish, reach checkout-complete.html with "Thank you for your order!"
-     * Actual (if bug): Fails to advance to Overview, fails on Finish, or does not show confirmation message
-     * Severity: High
-     */
-    @Test
-    public void testCase1() throws InterruptedException {
-        System.out.println("\n--- [TEST CASE 1] مسار E2E كامل وإتمام الأوردر باسم: " + FULL_NAME + " ---");
+    @Test(priority = 1)
+    public void testCase1_FailedLogin() throws InterruptedException {
+        System.out.println("\n--- [TEST CASE 1] محاولة الدخول ببيانات غير صحيحة (ميدخلش) ---");
+        attemptLogin("standard_user", "wrong_password_123");
+
+        String errorText = waitForVisible(LOGIN_ERROR_MSG, "Login Error Message").getText().trim();
+        showStep("لم يدخل وظهرت رسالة الخطأ: \"" + errorText + "\"", 1400);
+
+        Assert.assertTrue(errorText.contains("Username and password do not match"),
+                "Expected login failure message, got: " + errorText);
+        Assert.assertEquals(driver.getCurrentUrl(), "https://www.saucedemo.com/",
+                "Expected user to stay on Login page.");
+    }
+
+    @Test(priority = 2)
+    public void testCase2_SuccessfulLoginAndFullPurchase() throws InterruptedException {
+        System.out.println("\n--- [TEST CASE 2] الدخول بنجاح وشراء منتج باسم: " + FULL_NAME + " ---");
+        loginAndNavigateToCheckoutStepOne();
         fillCheckoutInfoAndContinue(FULL_FIRST_FIELD, FULL_LAST_FIELD, POSTAL_CODE);
         completeOrderUntilEnd();
 
@@ -231,137 +260,81 @@ public class E2E_testing {
                 "Expected confirmation 'Thank you for your order!'.");
     }
 
-    /*
-     * BUG REPORT - TC2
-     * Title: Missing First Name does not block checkout or show 'Error: First Name is required'
-     * Steps: Leave First Name empty, enter Last Name="Abdelrazek Youssef" and Postal Code="32511" -> Click Continue
-     * Expected: Show 'Error: First Name is required' and stay on Step One
-     * Actual (if bug): Wrong/missing error message or user navigates away from Step One
-     * Severity: High
-     */
-    @Test
-    public void testCase2() throws InterruptedException {
-        System.out.println("\n--- [TEST CASE 2] ترك First Name فارغاً ---");
+    @Test(priority = 3)
+    public void testCase3_MissingFirstName() throws InterruptedException {
+        System.out.println("\n--- [TEST CASE 3] ترك First Name فارغاً ---");
+        loginAndNavigateToCheckoutStepOne();
         fillCheckoutInfoAndContinue("", FULL_LAST_FIELD, POSTAL_CODE);
 
         String actualError = waitForVisible(ERROR_CONTAINER, "Error Message").getText().trim();
-        showStep("رسالة الخطأ الظاهرة: \"" + actualError + "\"", 1100);
+        showStep("رسالة الخطأ الظاهرة: \"" + actualError + "\"", 1200);
 
         Assert.assertEquals(actualError, "Error: First Name is required",
-                "Expected 'Error: First Name is required' when First Name is empty, got: '" + actualError + "'");
+                "Expected 'Error: First Name is required', got: '" + actualError + "'");
         Assert.assertTrue(driver.getCurrentUrl().contains("checkout-step-one.html"),
-                "Expected user to remain on Step One when First Name is missing.");
+                "Expected user to remain on Step One.");
     }
 
-    /*
-     * BUG REPORT - TC3
-     * Title: Invalid Postal Code ("abc@#$") accepted without validation error
-     * Steps: Enter First Name="Yasmeen Salah", Last Name="Abdelrazek Youssef", Postal Code="abc@#$" -> Click Continue
-     * Expected: Reject invalid Postal Code with error message and stay on Step One
-     * Actual (if bug): Accepted without error or navigated away from Step One
-     * Severity: Medium
-     */
-    @Test
-    public void testCase3() throws InterruptedException {
-        System.out.println("\n--- [TEST CASE 3] إدخال حروف ورموز في Postal Code (abc@#$) ---");
+    @Test(priority = 4)
+    public void testCase4_InvalidPostalCode() throws InterruptedException {
+        System.out.println("\n--- [TEST CASE 4] إدخال حروف ورموز في Postal Code (abc@#$) ---");
+        loginAndNavigateToCheckoutStepOne();
         fillCheckoutInfoAndContinue(FULL_FIRST_FIELD, FULL_LAST_FIELD, "abc@#$");
 
         String actualError = waitForVisible(ERROR_CONTAINER, "Error Message").getText().trim();
-        showStep("رسالة الخطأ بعد إدخال Postal Code غير صالح: \"" + actualError + "\"", 1100);
+        showStep("رسالة الخطأ بعد إدخال Postal Code غير صالح: \"" + actualError + "\"", 1200);
 
         Assert.assertFalse(actualError.isEmpty(),
-                "Bug Detected: Invalid Postal Code 'abc@#$' was accepted without a validation error message.");
+                "Bug Detected: Invalid Postal Code 'abc@#$' was accepted without validation error.");
         Assert.assertTrue(driver.getCurrentUrl().contains("checkout-step-one.html"),
-                "Bug Detected: Application navigated away from Step One despite invalid Postal Code 'abc@#$'.");
+                "Bug Detected: Navigated away from Step One despite invalid Postal Code.");
     }
 
-    /*
-     * BUG REPORT - TC4
-     * Title: Whitespace-only checkout fields ("   ") accepted without error
-     * Steps: Enter "   " in First Name, Last Name, and Postal Code -> Click Continue
-     * Expected: Reject spaces-only input with error message and stay on Step One
-     * Actual (if bug): No error displayed or navigated to Step Two
-     * Severity: Medium
-     */
-    @Test
-    public void testCase4() throws InterruptedException {
-        System.out.println("\n--- [TEST CASE 4] إدخال مسافات فقط (\"   \") في الحقول ---");
-        fillCheckoutInfoAndContinue("   ", "   ", "   ");
+    private static final By CLOSE_MENU_BTN = By.cssSelector("button#react-burger-cross-btn");
 
-        String actualError = waitForVisible(ERROR_CONTAINER, "Error Message").getText().trim();
-        showStep("رسالة الخطأ بعد إدخال مسافات فقط: \"" + actualError + "\"", 1100);
-
-        Assert.assertFalse(actualError.isEmpty(),
-                "Bug Detected: Whitespace-only checkout fields were accepted without a required-field error.");
-        Assert.assertTrue(driver.getCurrentUrl().contains("checkout-step-one.html"),
-                "Bug Detected: Application progressed to Step Two when all fields contained spaces only.");
-    }
-
-    /*
-     * BUG REPORT - TC5
-     * Title: Sidebar menu does not open cleanly or Cancel button does not return to cart.html
-     * Steps: Click Burger Menu -> Check aria-hidden="false" and About link visibility -> Click Cancel
-     * Expected: Sidebar menu opens with About link visible, and Cancel returns to cart.html
-     * Actual (if bug): Menu stays aria-hidden="true", About link not visible, or URL is not cart.html
-     * Severity: Medium
-     */
-    @Test
-    public void testCase5() throws InterruptedException {
+    @Test(priority = 5)
+    public void testCase5_SidebarAndCancel() throws InterruptedException {
         System.out.println("\n--- [TEST CASE 5] فتح القائمة الجانبية والضغط على زر Cancel ---");
 
-        showStep("الضغط على زر القائمة الجانبية (Burger Menu)", 600);
-        waitAndClick(BURGER_MENU_BTN, "Burger Menu Button", 1300);
+        try {
+            loginAndNavigateToCheckoutStepOne();
 
-        String ariaHidden = waitForVisible(MENU_WRAP, "Menu Wrap").getAttribute("aria-hidden");
-        boolean aboutVisible = waitForVisible(ABOUT_SIDEBAR_LINK, "About Link").isDisplayed();
-        showStep("حالة القائمة aria-hidden=" + ariaHidden + " | ظهور رابط About=" + aboutVisible, 1100);
+            showStep("الخطوة الأخيرة (1): أضغط الآن على زر القائمة الجانبية (Burger Menu)", 900);
+            waitAndClick(BURGER_MENU_BTN, "Burger Menu Button", 1500);
 
-        Assert.assertEquals(ariaHidden, "false",
-                "Bug Detected: Sidebar menu wrap remained aria-hidden='true' after clicking the menu button.");
-        Assert.assertTrue(aboutVisible,
-                "Bug Detected: 'About' sidebar link is not visible when sidebar menu is opened.");
+            WebElement menuWrap = wait.until(ExpectedConditions.presenceOfElementLocated(MENU_WRAP));
+            highlightElement(menuWrap);
+            String ariaHidden = menuWrap.getAttribute("aria-hidden");
+            boolean aboutVisible = waitForVisible(ABOUT_SIDEBAR_LINK, "About Link").isDisplayed();
+            showStep("الخطوة الأخيرة (2): حالة القائمة aria-hidden=" + ariaHidden + " | ظهور رابط About=" + aboutVisible, 1400);
 
-        showStep("الضغط على زر Cancel للعودة إلى السلة", 600);
-        waitAndClick(CANCEL_BUTTON, "Cancel Button", 1400);
-        showStep("بعد الضغط على Cancel | URL الحالي: " + driver.getCurrentUrl(), 1000);
+            Assert.assertEquals(ariaHidden, "false",
+                    "Bug Detected: Sidebar menu remained hidden (aria-hidden='true').");
+            Assert.assertTrue(aboutVisible,
+                    "Bug Detected: 'About' link is not visible inside sidebar.");
 
-        Assert.assertTrue(driver.getCurrentUrl().contains("cart.html"),
-                "Bug Detected: Clicking Cancel did not return to /cart.html; current URL is: " + driver.getCurrentUrl());
-    }
+            showStep("الخطوة الأخيرة (3): أغلق القائمة الجانبية الآن حتى يظهر زر Cancel بوضوح", 900);
+            waitAndClick(CLOSE_MENU_BTN, "Close Sidebar Button", 1400);
 
-    @AfterMethod
-    public void afterMethod(ITestResult result) throws InterruptedException {
-        totalTests++;
-        String methodName = result.getMethod().getMethodName();
-        if (result.getStatus() == ITestResult.SUCCESS) {
-            passedTests++;
-            System.out.println("[AFTER METHOD] " + methodName + " -> PASSED");
-        } else if (result.getStatus() == ITestResult.FAILURE) {
-            failedTests++;
-            String msg = result.getThrowable() != null ? result.getThrowable().getMessage() : "Assertion failed";
-            detectedBugs.add(methodName + ": " + msg);
-            System.out.println("[AFTER METHOD] " + methodName + " -> FAILED | " + msg);
-        }
-        Thread.sleep(900);
-    }
+            showStep("الخطوة الأخيرة (4): أضغط الآن على زر Cancel للعودة إلى السلة (cart.html)", 900);
+            waitAndClick(CANCEL_BUTTON, "Cancel Button", 1600);
 
-    @AfterClass
-    public void afterClass() {
-        // SUMMARY REPORT
-        System.out.println("\n==================== SUMMARY REPORT ====================");
-        System.out.println("Class Name   : E2E_testing");
-        System.out.println("Executed By  : " + FULL_NAME);
-        System.out.println("Total Tests  : " + totalTests);
-        System.out.println("Passed       : " + passedTests);
-        System.out.println("Failed       : " + failedTests);
-        System.out.println("Bugs Found   : " + detectedBugs.size());
-        for (int i = 0; i < detectedBugs.size(); i++) {
-            System.out.println((i + 1) + ". " + detectedBugs.get(i));
-        }
-        System.out.println("========================================================\n");
+            String currentUrl = driver.getCurrentUrl();
+            showStep("الخطوة الأخيرة (5 - النهاية): فحص الرابط بعد Cancel -> URL الحالي: " + currentUrl, 1600);
 
-        if (driver != null) {
-            driver.quit();
+            Assert.assertTrue(currentUrl.contains("cart.html"),
+                    "FAILED AT LAST STEP: Expected URL to contain 'cart.html' after clicking Cancel, but got: " + currentUrl);
+
+            showStep("نتيجة آخر خطوة: نجحت وعادت إلى صفحة السلة بنجاح!", 1500);
+
+        } catch (AssertionError | Exception e) {
+            System.out.println("==========================================================");
+            System.out.println("[LAST STEP FAILURE DETAIL] توقفت/فشلت آخر خطوة في testCase5!");
+            System.out.println("Current URL : " + driver.getCurrentUrl());
+            System.out.println("Reason      : " + e.getMessage());
+            System.out.println("==========================================================");
+            Thread.sleep(1500);
+            throw e;
         }
     }
-}
+    }
