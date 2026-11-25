@@ -16,7 +16,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-public class toqa {
+public class   toqa {
 
     private static final String BASE_URL = "https://www.saucedemo.com/";
 
